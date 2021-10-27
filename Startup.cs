@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -57,9 +59,22 @@ namespace endpoints
                     await context.Response.WriteAsync(number + " " + form);
                 });
 
-                endpoints.MapGet("/frequency", async context =>
+                endpoints.MapPost("/frequency", async context =>
                 {
-                    await context.Response.WriteAsync("3");
+                    string input = await new StreamReader(context.Request.Body).ReadToEndAsync();
+                    var dict = WordFrequency.GetDictionary(input);
+                    int uniqueWords = dict.Count;
+                    KeyValuePair<string, int> mostFrequentWord = dict.First();
+                    foreach (var pair in dict)
+                    {
+                        if (pair.Value > mostFrequentWord.Value)
+                            mostFrequentWord = pair;
+                    }
+                    context.Response.ContentType = "application/json";
+                    context.Response.Headers.Add("uniqueWords", dict.Count.ToString());
+                    context.Response.Headers.Add("mostFrequentWord", mostFrequentWord.Key);
+
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(dict));
                 });
             });
         }
